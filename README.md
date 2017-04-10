@@ -25,5 +25,5 @@ the appropriate `kubectl config set-credentials` command and/or a templated
 `~/.kube/config` with the appropriate users and contexts filled.
 
 # Alternatives
-https://github.com/micahhausler/k8s-oidc-helper
-https://github.com/coreos/dex/tree/master/cmd/example-app
+* https://github.com/micahhausler/k8s-oidc-helper
+* https://github.com/coreos/dex/tree/master/cmd/example-app
