@@ -33,7 +33,7 @@ type OIDC interface {
 }
 
 type oidcExtractor struct {
-	v oidc.IDTokenVerifier
+	v *oidc.IDTokenVerifier
 	h *http.Client
 }
 
@@ -49,7 +49,7 @@ func HTTPClient(h *http.Client) Option {
 }
 
 // NewOIDC creates a new OIDC extractor.
-func NewOIDC(v oidc.IDTokenVerifier, oo ...Option) (OIDC, error) {
+func NewOIDC(v *oidc.IDTokenVerifier, oo ...Option) (OIDC, error) {
 	oe := &oidcExtractor{v: v, h: http.DefaultClient}
 
 	for _, o := range oo {
