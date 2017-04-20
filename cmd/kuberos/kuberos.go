@@ -36,7 +36,7 @@ func logReq(fn http.HandlerFunc, log *zap.Logger) http.HandlerFunc {
 func main() {
 	var (
 		app    = kingpin.New(filepath.Base(os.Args[0]), "Provides OIDC authentication configuration for kubectl.").DefaultEnvars()
-		ui     = app.Flag("ui", "Directory from which to serve Javascript UI.").Default("frontend").ExistingDir()
+		ui     = app.Flag("ui", "Directory from which to serve Javascript UI.").Default("/kuberos/frontend").ExistingDir()
 		listen = app.Flag("listen", "Address at which to expose HTTP webhook.").Default(":10003").String()
 		debug  = app.Flag("debug", "Run with debug logging.").Short('d').Bool()
 		stop   = app.Flag("close-after", "Wait this long at shutdown before closing HTTP connections.").Default("1m").Duration()
@@ -47,7 +47,7 @@ func main() {
 		issuerURL        = app.Arg("oidc-issuer-url", "OpenID Connect issuer URL.").URL()
 		clientID         = app.Arg("client-id", "OAuth2 client ID.").String()
 		clientSecretFile = app.Arg("client-secret-file", "File containing OAuth2 client secret.").ExistingFile()
-		templateFile     = app.Arg("kubecfg-template", "A kubecfg file containing clusters to populate with a user and contexts").ExistingFile()
+		templateFile     = app.Arg("kubecfg-template", "A kubecfg file containing clusters to populate with a user and contexts.").ExistingFile()
 	)
 
 	kingpin.MustParse(app.Parse(os.Args[1:]))
