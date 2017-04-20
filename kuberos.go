@@ -22,8 +22,9 @@ const (
 	// be redirected after authentication.
 	DefaultKubeCfgEndpoint = "/ui"
 
-	schemeHTTP  = "http"
-	schemeHTTPS = "https"
+	schemeHTTP              = "http"
+	schemeHTTPS             = "https"
+	elbHeaderForwardedProto = "X-Forwarded-Proto"
 
 	urlParamState            = "state"
 	urlParamCode             = "code"
@@ -256,6 +257,18 @@ func redirectURL(r *http.Request, endpoint *url.URL) string {
 	if r.TLS != nil {
 		u.Scheme = schemeHTTPS
 	}
+
+	// Redirect to HTTPS if we're listening on HTTP behind an HTTPS ELB.
+	for h, v := range r.Header {
+		if h == elbHeaderForwardedProto {
+			for _, proto := range v {
+				if proto == schemeHTTPS {
+					u.Scheme = schemeHTTPS
+				}
+			}
+		}
+	}
+	// TODO(negz): Set port if X-Forwarded-Port exists?
 	u.Host = r.Host
 	return fmt.Sprint(u.ResolveReference(endpoint))
 }
