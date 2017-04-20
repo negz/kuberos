@@ -7,16 +7,20 @@ import (
 	"net/http"
 	"net/url"
 
-	oidc "github.com/coreos/go-oidc"
 	"github.com/negz/kuberos/extractor"
+
+	oidc "github.com/coreos/go-oidc"
+	"github.com/gorilla/schema"
 	"github.com/pkg/errors"
 	"golang.org/x/oauth2"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/tools/clientcmd/api"
 )
 
 const (
 	// DefaultKubeCfgEndpoint is the default endpoint to which clients should
 	// be redirected after authentication.
-	DefaultKubeCfgEndpoint = "/kubecfg"
+	DefaultKubeCfgEndpoint = "/ui"
 
 	schemeHTTP  = "http"
 	schemeHTTPS = "https"
@@ -26,6 +30,16 @@ const (
 	urlParamError            = "error"
 	urlParamErrorDescription = "error_description"
 	urlParamErrorURI         = "error_uri"
+
+	templateUser             = "kuberos"
+	templateAuthProvider     = "oidc"
+	templateOIDCClientID     = "client-id"
+	templateOIDCClientSecret = "client-secret"
+	templateOIDCIDToken      = "id-token"
+	templateOIDCIssuer       = "idp-issuer-url"
+	templateOIDCRefreshToken = "refresh-token"
+
+	templateFormParseMemory = 32 << 20 // 32MB
 )
 
 var (
@@ -42,6 +56,12 @@ var (
 	// ErrMissingCode indicates a response without an OAuth 2.0 authorization
 	// code
 	ErrMissingCode = errors.New("response missing authorization code")
+
+	// ErrNoYAMLSerializer indicates we're unable to serialize Kubernetes
+	// objects as YAML.
+	ErrNoYAMLSerializer = errors.New("no YAML serializer registered")
+
+	decoder = schema.NewDecoder()
 )
 
 // A StateFn should take an HTTP request and return a difficult to predict yet
@@ -128,14 +148,6 @@ func HTTPClient(c *http.Client) Option {
 	}
 }
 
-// KubeCfgEndpoint allows the use of a bespoke endpoint for serving kubecfgs.
-func KubeCfgEndpoint(e *url.URL) Option {
-	return func(h *Handlers) error {
-		h.endpoint = e
-		return nil
-	}
-}
-
 // AuthCodeOptions allows the use of bespoke OAuth2 options.
 func AuthCodeOptions(oo []oauth2.AuthCodeOption) Option {
 	return func(h *Handlers) error {
@@ -169,12 +181,6 @@ func NewHandlers(c *oauth2.Config, e extractor.OIDC, ho ...Option) (*Handlers, e
 		}
 	}
 	return h, nil
-}
-
-// KubeCfgEndpoint returns the endpoint at which the kubecfg handler must be
-// registered.
-func (h *Handlers) KubeCfgEndpoint() string {
-	return fmt.Sprint(h.endpoint)
 }
 
 // Login redirects to an OIDC provider per the supplied oauth2 config.
@@ -252,4 +258,54 @@ func redirectURL(r *http.Request, endpoint *url.URL) string {
 	}
 	u.Host = r.Host
 	return fmt.Sprint(u.ResolveReference(endpoint))
+}
+
+// Template returns an HTTP handler that returns a new kubecfg by taking a
+// template with existing clusters and adding a user and context for each based
+// on the URL parameters passed to it.
+func Template(cfg *api.Config) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		r.ParseMultipartForm(templateFormParseMemory)
+		p := &extractor.OIDCAuthenticationParams{}
+
+		// TODO(negz): Return an error if any required parameter is absent.
+		if err := decoder.Decode(p, r.Form); err != nil {
+			http.Error(w, errors.Wrap(err, "cannot parse URL parameter").Error(), http.StatusBadRequest)
+			return
+		}
+
+		c := &api.Config{}
+		c.AuthInfos = make(map[string]*api.AuthInfo)
+		c.Clusters = make(map[string]*api.Cluster)
+		c.Contexts = make(map[string]*api.Context)
+		c.AuthInfos[templateUser] = &api.AuthInfo{
+			Username: p.Username,
+			AuthProvider: &api.AuthProviderConfig{
+				Name: templateAuthProvider,
+				Config: map[string]string{
+					templateOIDCClientID:     p.ClientID,
+					templateOIDCClientSecret: p.ClientSecret,
+					templateOIDCIDToken:      p.IDToken,
+					templateOIDCRefreshToken: p.RefreshToken,
+					templateOIDCIssuer:       p.IssuerURL,
+				},
+			},
+		}
+		for name, cluster := range cfg.Clusters {
+			c.Clusters[name] = cluster
+			c.Contexts[name] = &api.Context{Cluster: name, AuthInfo: templateUser}
+		}
+
+		y, err := clientcmd.Write(*c)
+		if err != nil {
+			http.Error(w, errors.Wrap(err, "cannot marshal template to YAML").Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/x-yaml; charset=utf-8")
+		w.Header().Set("Content-Disposition", "attachment")
+		if _, err := w.Write(y); err != nil {
+			http.Error(w, errors.Wrap(err, "cannot write response").Error(), http.StatusInternalServerError)
+		}
+	}
 }

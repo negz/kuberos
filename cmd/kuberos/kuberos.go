@@ -18,6 +18,7 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/oauth2"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 func logReq(fn http.HandlerFunc, log *zap.Logger) http.HandlerFunc {
@@ -26,6 +27,7 @@ func logReq(fn http.HandlerFunc, log *zap.Logger) http.HandlerFunc {
 			zap.String("host", r.Host),
 			zap.String("method", r.Method),
 			zap.String("url", r.URL.String()),
+			zap.String("agent", r.UserAgent()),
 			zap.String("addr", r.RemoteAddr))
 		fn(w, r)
 	}
@@ -34,6 +36,7 @@ func logReq(fn http.HandlerFunc, log *zap.Logger) http.HandlerFunc {
 func main() {
 	var (
 		app    = kingpin.New(filepath.Base(os.Args[0]), "Provides OIDC authentication configuration for kubectl.").DefaultEnvars()
+		ui     = app.Flag("ui", "Directory from which to serve Javascript UI.").Default("frontend").ExistingDir()
 		listen = app.Flag("listen", "Address at which to expose HTTP webhook.").Default(":10003").String()
 		debug  = app.Flag("debug", "Run with debug logging.").Short('d').Bool()
 		stop   = app.Flag("close-after", "Wait this long at shutdown before closing HTTP connections.").Default("1m").Duration()
@@ -44,6 +47,7 @@ func main() {
 		issuerURL        = app.Arg("oidc-issuer-url", "OpenID Connect issuer URL.").URL()
 		clientID         = app.Arg("client-id", "OAuth2 client ID.").String()
 		clientSecretFile = app.Arg("client-secret-file", "File containing OAuth2 client secret.").ExistingFile()
+		templateFile     = app.Arg("kubecfg-template", "A kubecfg file containing clusters to populate with a user and contexts").ExistingFile()
 	)
 
 	kingpin.MustParse(app.Parse(os.Args[1:]))
@@ -75,9 +79,16 @@ func main() {
 	h, err := kuberos.NewHandlers(cfg, e)
 	kingpin.FatalIfError(err, "cannot setup HTTP handlers")
 
+	lr := clientcmd.ClientConfigLoadingRules{ExplicitPath: *templateFile}
+	tmpl, err := lr.Load()
+	kingpin.FatalIfError(err, "cannot load kubecfg template %s", *templateFile)
+
 	r := httprouter.New()
+	// TODO(negz): Log static asset requests.
+	r.ServeFiles("/ui/*filepath", http.Dir(*ui))
 	r.HandlerFunc("GET", "/", logReq(h.Login, log))
-	r.HandlerFunc("GET", h.KubeCfgEndpoint(), logReq(h.KubeCfg, log))
+	r.HandlerFunc("GET", "/kubecfg", logReq(h.KubeCfg, log))
+	r.HandlerFunc("GET", "/kubecfg.yaml", logReq(kuberos.Template(tmpl), log))
 	r.HandlerFunc("GET", "/quitquitquit", logReq(func(_ http.ResponseWriter, _ *http.Request) { os.Exit(0) }, log))
 
 	hd := &httpdown.HTTP{StopTimeout: *stop, KillTimeout: *kill}

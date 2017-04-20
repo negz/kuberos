@@ -18,12 +18,12 @@ var ErrMissingIDToken = errors.New("response missing ID token")
 // OIDCAuthenticationParams are the parameters required for kubectl to
 // authenticate to Kubernetes via OIDC.
 type OIDCAuthenticationParams struct {
-	Username     string `json:"email"` // TODO(negz): Support other claims.
-	ClientID     string `json:"clientID"`
-	ClientSecret string `json:"clientSecret"`
-	IDToken      string `json:"idToken"`
-	RefreshToken string `json:"refreshToken"`
-	IssuerURL    string `json:"issuer"`
+	Username     string `json:"email" schema:"email"` // TODO(negz): Support other claims.
+	ClientID     string `json:"clientID" schema:"clientID"`
+	ClientSecret string `json:"clientSecret" schema:"clientSecret"`
+	IDToken      string `json:"idToken" schema:"idToken"`
+	RefreshToken string `json:"refreshToken" schema:"refreshToken"`
+	IssuerURL    string `json:"issuer" schema:"issuer"`
 }
 
 // An OIDC extractor performs OIDC validation, extracting and storing the
