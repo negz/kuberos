@@ -25,3 +25,6 @@ _testmain.go
 
 frontend/node_modules
 frontend/dist
+
+vendor/
+dist/
