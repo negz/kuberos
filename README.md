@@ -1,7 +1,7 @@
 # kuberos
 An OIDC authentication helper for Kubernetes' `kubectl`.
 
-![The kuberos UI](https://raw.githubusercontent.com/negz/kuberos/master/kuberos.png)
+![The kuberos UI](kuberos.png)
 
 ## Purpose
 Kubernetes supports several authentication methods, a popular one of which is OIDC.
