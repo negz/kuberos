@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 
+	"go.uber.org/zap"
 	"golang.org/x/oauth2"
 
 	oidc "github.com/coreos/go-oidc"
@@ -33,8 +34,9 @@ type OIDC interface {
 }
 
 type oidcExtractor struct {
-	v *oidc.IDTokenVerifier
-	h *http.Client
+	log *zap.Logger
+	v   *oidc.IDTokenVerifier
+	h   *http.Client
 }
 
 // An Option represents a OIDC extractor option.
@@ -48,9 +50,22 @@ func HTTPClient(h *http.Client) Option {
 	}
 }
 
+// Logger allows the use of a bespoke Zap logger.
+func Logger(l *zap.Logger) Option {
+	return func(o *oidcExtractor) error {
+		o.log = l
+		return nil
+	}
+}
+
 // NewOIDC creates a new OIDC extractor.
 func NewOIDC(v *oidc.IDTokenVerifier, oo ...Option) (OIDC, error) {
-	oe := &oidcExtractor{v: v, h: http.DefaultClient}
+	l, err := zap.NewProduction()
+	if err != nil {
+		return nil, errors.Wrap(err, "cannot create default logger")
+	}
+
+	oe := &oidcExtractor{log: l, v: v, h: http.DefaultClient}
 
 	for _, o := range oo {
 		if err := o(oe); err != nil {
@@ -61,6 +76,7 @@ func NewOIDC(v *oidc.IDTokenVerifier, oo ...Option) (OIDC, error) {
 }
 
 func (o *oidcExtractor) Process(ctx context.Context, cfg *oauth2.Config, code string) (*OIDCAuthenticationParams, error) {
+	o.log.Debug("exchange ", zap.String("code", code))
 	octx := oidc.ClientContext(ctx, o.h)
 	token, err := cfg.Exchange(octx, code)
 	if err != nil {
@@ -71,6 +87,7 @@ func (o *oidcExtractor) Process(ctx context.Context, cfg *oauth2.Config, code st
 	if !ok {
 		return nil, ErrMissingIDToken
 	}
+	o.log.Debug("token", zap.String("id", id), zap.Any("token", token))
 
 	idt, err := o.v.Verify(ctx, id)
 	if err != nil {

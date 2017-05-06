@@ -65,6 +65,7 @@ func main() {
 	ctx := oidc.ClientContext(context.Background(), http.DefaultClient)
 	provider, err := oidc.NewProvider(ctx, (*issuerURL).String())
 	kingpin.FatalIfError(err, "cannot create OIDC provider from issuer %v", *issuerURL)
+	log.Debug("established OIDC provider", zap.String("url", provider.Endpoint().TokenURL))
 
 	scopes := kuberos.ScopeRequests{OfflineAsScope: kuberos.OfflineAsScope(provider)}
 	cfg := &oauth2.Config{
@@ -73,7 +74,7 @@ func main() {
 		Endpoint:     provider.Endpoint(),
 		Scopes:       scopes.Get(),
 	}
-	e, err := extractor.NewOIDC(provider.Verifier(&oidc.Config{ClientID: *clientID}))
+	e, err := extractor.NewOIDC(provider.Verifier(&oidc.Config{ClientID: *clientID}), extractor.Logger(log))
 	kingpin.FatalIfError(err, "cannot setup OIDC extractor")
 
 	h, err := kuberos.NewHandlers(cfg, e)

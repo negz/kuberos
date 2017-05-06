@@ -291,7 +291,7 @@ func redirectURL(r *http.Request, endpoint *url.URL) string {
 // on the URL parameters passed to it.
 func Template(cfg *api.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		r.ParseMultipartForm(templateFormParseMemory)
+		r.ParseMultipartForm(templateFormParseMemory) //nolint:errcheck
 		p := &extractor.OIDCAuthenticationParams{}
 
 		// TODO(negz): Return an error if any required parameter is absent.
