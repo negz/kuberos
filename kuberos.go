@@ -191,7 +191,7 @@ func NewHandlers(c *oauth2.Config, e extractor.OIDC, ho ...Option) (*Handlers, e
 		log:        l,
 		cfg:        c,
 		e:          e,
-		oo:         []oauth2.AuthCodeOption{oauth2.AccessTypeOffline},
+		oo:         []oauth2.AuthCodeOption{oauth2.ApprovalForce, oauth2.AccessTypeOffline},
 		state:      defaultStateFn([]byte(c.ClientSecret)),
 		httpClient: http.DefaultClient,
 		endpoint:   &url.URL{Path: DefaultKubeCfgEndpoint},
@@ -201,7 +201,7 @@ func NewHandlers(c *oauth2.Config, e extractor.OIDC, ho ...Option) (*Handlers, e
 	for _, s := range c.Scopes {
 		// ...Unless we find an offline scope
 		if s == oidc.ScopeOfflineAccess {
-			h.oo = []oauth2.AuthCodeOption{}
+			h.oo = []oauth2.AuthCodeOption{oauth2.ApprovalForce}
 		}
 	}
 
