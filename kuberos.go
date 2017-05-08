@@ -66,6 +66,8 @@ var (
 	ErrNoYAMLSerializer = errors.New("no YAML serializer registered")
 
 	decoder = schema.NewDecoder()
+
+	approvalConsent = oauth2.SetAuthURLParam("prompt", "consent")
 )
 
 // A StateFn should take an HTTP request and return a difficult to predict yet
@@ -191,7 +193,7 @@ func NewHandlers(c *oauth2.Config, e extractor.OIDC, ho ...Option) (*Handlers, e
 		log:        l,
 		cfg:        c,
 		e:          e,
-		oo:         []oauth2.AuthCodeOption{oauth2.ApprovalForce, oauth2.AccessTypeOffline},
+		oo:         []oauth2.AuthCodeOption{oauth2.AccessTypeOffline, approvalConsent},
 		state:      defaultStateFn([]byte(c.ClientSecret)),
 		httpClient: http.DefaultClient,
 		endpoint:   &url.URL{Path: DefaultKubeCfgEndpoint},
@@ -201,7 +203,7 @@ func NewHandlers(c *oauth2.Config, e extractor.OIDC, ho ...Option) (*Handlers, e
 	for _, s := range c.Scopes {
 		// ...Unless we find an offline scope
 		if s == oidc.ScopeOfflineAccess {
-			h.oo = []oauth2.AuthCodeOption{oauth2.ApprovalForce}
+			h.oo = []oauth2.AuthCodeOption{approvalConsent}
 		}
 	}
 
