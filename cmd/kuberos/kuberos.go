@@ -77,7 +77,7 @@ func main() {
 	e, err := extractor.NewOIDC(provider.Verifier(&oidc.Config{ClientID: *clientID}), extractor.Logger(log))
 	kingpin.FatalIfError(err, "cannot setup OIDC extractor")
 
-	h, err := kuberos.NewHandlers(cfg, e)
+	h, err := kuberos.NewHandlers(cfg, e, kuberos.Logger(log))
 	kingpin.FatalIfError(err, "cannot setup HTTP handlers")
 
 	lr := clientcmd.ClientConfigLoadingRules{ExplicitPath: *templateFile}

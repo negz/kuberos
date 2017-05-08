@@ -12,6 +12,7 @@ import (
 	oidc "github.com/coreos/go-oidc"
 	"github.com/gorilla/schema"
 	"github.com/pkg/errors"
+	"go.uber.org/zap"
 	"golang.org/x/oauth2"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
@@ -135,6 +136,7 @@ func (r *ScopeRequests) Get() []string {
 
 // Handlers provides HTTP handlers for the Kubernary service.
 type Handlers struct {
+	log        *zap.Logger
 	cfg        *oauth2.Config
 	e          extractor.OIDC
 	oo         []oauth2.AuthCodeOption
@@ -170,12 +172,26 @@ func AuthCodeOptions(oo []oauth2.AuthCodeOption) Option {
 	}
 }
 
+// Logger allows the use of a bespoke Zap logger.
+func Logger(l *zap.Logger) Option {
+	return func(h *Handlers) error {
+		h.log = l
+		return nil
+	}
+}
+
 // NewHandlers returns a new set of Kuberos HTTP handlers.
 func NewHandlers(c *oauth2.Config, e extractor.OIDC, ho ...Option) (*Handlers, error) {
+	l, err := zap.NewProduction()
+	if err != nil {
+		return nil, errors.Wrap(err, "cannot create default logger")
+	}
+
 	h := &Handlers{
+		log:        l,
 		cfg:        c,
 		e:          e,
-		oo:         []oauth2.AuthCodeOption{oauth2.AccessTypeOffline},
+		oo:         []oauth2.AuthCodeOption{oauth2.ApprovalForce, oauth2.AccessTypeOffline},
 		state:      defaultStateFn([]byte(c.ClientSecret)),
 		httpClient: http.DefaultClient,
 		endpoint:   &url.URL{Path: DefaultKubeCfgEndpoint},
@@ -185,7 +201,7 @@ func NewHandlers(c *oauth2.Config, e extractor.OIDC, ho ...Option) (*Handlers, e
 	for _, s := range c.Scopes {
 		// ...Unless we find an offline scope
 		if s == oidc.ScopeOfflineAccess {
-			h.oo = []oauth2.AuthCodeOption{}
+			h.oo = []oauth2.AuthCodeOption{oauth2.ApprovalForce}
 		}
 	}
 
@@ -207,7 +223,9 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 		RedirectURL:  redirectURL(r, h.endpoint),
 	}
 
-	http.Redirect(w, r, c.AuthCodeURL(h.state(r), h.oo...), http.StatusSeeOther)
+	u := c.AuthCodeURL(h.state(r), h.oo...)
+	h.log.Debug("redirect", zap.String("url", u))
+	http.Redirect(w, r, u, http.StatusSeeOther)
 }
 
 // KubeCfg returns a handler that forms helpers for kubecfg authentication.
