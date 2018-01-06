@@ -43,7 +43,8 @@ func main() {
 		kill   = app.Flag("kill-after", "Wait this long at shutdown before exiting.").Default("2m").Duration()
 		tlsCrt = app.Flag("tls-cert", "TLS certificate file.").ExistingFile()
 		tlsKey = app.Flag("tls-key", "TLS private key file.").ExistingFile()
-
+		extraScopes = app.Flag("extra-scopes", "List of additional scopes to provide in token.").Strings()
+		
 		issuerURL        = app.Arg("oidc-issuer-url", "OpenID Connect issuer URL.").URL()
 		clientID         = app.Arg("client-id", "OAuth2 client ID.").String()
 		clientSecretFile = app.Arg("client-secret-file", "File containing OAuth2 client secret.").ExistingFile()
@@ -67,7 +68,7 @@ func main() {
 	kingpin.FatalIfError(err, "cannot create OIDC provider from issuer %v", *issuerURL)
 	log.Debug("established OIDC provider", zap.String("url", provider.Endpoint().TokenURL))
 
-	scopes := kuberos.ScopeRequests{OfflineAsScope: kuberos.OfflineAsScope(provider)}
+	scopes := kuberos.ScopeRequests{OfflineAsScope: kuberos.OfflineAsScope(provider),ExtraScopes: *extraScopes }
 	cfg := &oauth2.Config{
 		ClientID:     *clientID,
 		ClientSecret: strings.TrimSpace(string(clientSecret)),
