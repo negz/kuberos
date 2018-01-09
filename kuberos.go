@@ -325,7 +325,6 @@ func Template(cfg *api.Config) http.HandlerFunc {
 		c.Clusters = make(map[string]*api.Cluster)
 		c.Contexts = make(map[string]*api.Context)
 		c.AuthInfos[templateUser] = &api.AuthInfo{
-			Username: p.Username,
 			AuthProvider: &api.AuthProviderConfig{
 				Name: templateAuthProvider,
 				Config: map[string]string{
