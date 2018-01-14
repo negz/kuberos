@@ -28,3 +28,4 @@ frontend/dist
 
 vendor/
 dist/
+statik/statik.go
