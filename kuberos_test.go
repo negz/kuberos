@@ -60,7 +60,7 @@ var authCodeURLTests = []struct {
 			RedirectURL:  "https://example.org/redirect",
 		},
 		s:   func(_ *http.Request) string { return "state" },
-		url: "https://auth.example.org?access_type=offline&client_id=testClientID&redirect_uri=http%3A%2F%2Fexample.com%2Fui&response_type=code&scope=openid+profile+email&state=state",
+		url: "https://auth.example.org?access_type=offline&client_id=testClientID&prompt=consent&redirect_uri=http%3A%2F%2Fexample.com%2Fui&response_type=code&scope=openid+profile+email&state=state",
 	},
 	{
 		c: &oauth2.Config{
@@ -71,7 +71,7 @@ var authCodeURLTests = []struct {
 			RedirectURL:  "https://example.org/redirect",
 		},
 		s:   func(_ *http.Request) string { return "state" },
-		url: "https://auth.example.org?client_id=testClientID&redirect_uri=http%3A%2F%2Fexample.com%2Fui&response_type=code&scope=openid+offline_access&state=state",
+		url: "https://auth.example.org?client_id=testClientID&prompt=consent&redirect_uri=http%3A%2F%2Fexample.com%2Fui&response_type=code&scope=openid+offline_access&state=state",
 	},
 }
 
@@ -88,12 +88,12 @@ func TestAuthCodeURL(t *testing.T) {
 		h.Login(w, httptest.NewRequest("GET", "/", nil))
 
 		if w.Code != http.StatusSeeOther {
-			t.Errorf("w.Code: want %v, got %v", http.StatusSeeOther, w.Code)
+			t.Errorf("w.Code:\nwant %v\ngot %v\n", http.StatusSeeOther, w.Code)
 			continue
 		}
 		for _, u := range w.Header()["Location"] {
 			if u != tt.url {
-				t.Errorf("u: want %v, got %v", tt.url, u)
+				t.Errorf("u:\nwant %v\ngot %v\n", tt.url, u)
 			}
 		}
 	}
