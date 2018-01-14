@@ -7,7 +7,7 @@ OIDC_CLIENT_SECRET=$2
 
 CFG=$(mktemp -d /tmp/kuberos.XXXX)
 echo $OIDC_CLIENT_SECRET >$CFG/secret
-echo <<EOF >$CFG/template
+cat <<EOF >$CFG/template
 apiVersion: v1
 kind: Config
 clusters:
