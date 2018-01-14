@@ -3,30 +3,40 @@
   "description": "An OIDC authentication helper for Kubernetes' kubectl",
   "version": "1.0.0",
   "author": "Nic Cope <n+kuberos@rk0n.org>",
+  "license": "Apache-2.0",
   "private": true,
   "scripts": {
     "dev": "cross-env NODE_ENV=development webpack-dev-server --hot",
     "build": "cross-env NODE_ENV=production webpack --progress --hide-modules"
   },
   "dependencies": {
-    "axios": "^0.16.1",
-    "bootstrap-vue": "^0.12.0",
-    "bootswatch": "^3.3.7",
-    "jquery": "^3.2.1",
-    "vue": "^2.2.1",
-    "vue-axios": "^2.0.1"
+    "axios": "^0.17.1",
+    "bootstrap": "^4.0.0-beta.2",
+    "bootstrap-vue": "^1.3.0",
+    "bootswatch": "^4.0.0-beta.2",
+    "highlight.js": "^9.12.0",
+    "vue": "^2.4.4",
+    "vue-axios": "^2.0.2",
+    "vue-highlightjs": "^1.3.3",
+    "vue-meta": "^1.4.0"
   },
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not ie <= 8"
+  ],
   "devDependencies": {
-    "babel-core": "^6.0.0",
-    "babel-loader": "^6.0.0",
-    "babel-preset-latest": "^6.0.0",
-    "cross-env": "^3.0.0",
-    "css-loader": "^0.28.0",
-    "file-loader": "^0.9.0",
-    "style-loader": "^0.16.1",
-    "vue-loader": "^11.1.4",
-    "vue-template-compiler": "^2.2.1",
-    "webpack": "^2.2.0",
-    "webpack-dev-server": "^2.2.0"
+    "@babel/preset-env": "^7.0.0-beta.37",
+    "babel-core": "^6.26.0",
+    "babel-loader": "^7.1.2",
+    "babel-preset-env": "^1.6.0",
+    "babel-preset-stage-3": "^6.24.1",
+    "cross-env": "^5.0.5",
+    "css-loader": "^0.28.7",
+    "file-loader": "^1.1.4",
+    "vue-loader": "^13.0.5",
+    "vue-template-compiler": "^2.4.4",
+    "webpack": "^3.6.0",
+    "webpack-dev-server": "^2.9.1"
   }
 }

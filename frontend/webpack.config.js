@@ -6,11 +6,17 @@ module.exports = {
   output: {
     path: path.resolve(__dirname, './dist'),
     publicPath: '/dist/',
-    filename: 'k.js'
+    filename: 'build.js'
   },
   module: {
     rules: [
       {
+        test: /\.css$/,
+        use: [
+          'vue-style-loader',
+          'css-loader'
+        ],
+      }, {
         test: /\.vue$/,
         loader: 'vue-loader',
         options: {
@@ -30,25 +36,23 @@ module.exports = {
         options: {
           name: '[name].[ext]?[hash]'
         }
-      },
-      {
-        test: /\.(eot|woff|woff2|svg|ttf)$/,
-        loader: "file-loader"
       }
     ]
   },
   plugins: [
-    new webpack.ProvidePlugin({'$': 'jquery'})
+    new webpack.ProvidePlugin({ '$': 'jquery' })
   ],
   resolve: {
     alias: {
       'jquery': "jquery/dist/jquery.min.js",
       'vue$': 'vue/dist/vue.esm.js'
-    }
+    },
+    extensions: ['*', '.js', '.vue', '.json']
   },
   devServer: {
     historyApiFallback: true,
-    noInfo: true
+    noInfo: true,
+    overlay: true,
   },
   performance: {
     hints: false
@@ -58,6 +62,7 @@ module.exports = {
 
 if (process.env.NODE_ENV === 'production') {
   module.exports.devtool = '#source-map'
+  // http://vue-loader.vuejs.org/en/workflow/production.html
   module.exports.plugins = (module.exports.plugins || []).concat([
     new webpack.DefinePlugin({
       'process.env': {
