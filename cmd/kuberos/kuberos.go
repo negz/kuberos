@@ -2,18 +2,23 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
+	"time"
 
 	"github.com/negz/kuberos"
 	"github.com/negz/kuberos/extractor"
+	"github.com/rakyll/statik/fs"
+
+	_ "github.com/negz/kuberos/statik"
 
 	oidc "github.com/coreos/go-oidc"
-	"github.com/facebookgo/httpdown"
 	"github.com/julienschmidt/httprouter"
 	"go.uber.org/zap"
 	"golang.org/x/oauth2"
@@ -21,30 +26,29 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-func logReq(fn http.HandlerFunc, log *zap.Logger) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+const indexPath = "/index.html"
+
+func logRequests(h http.Handler, log *zap.Logger) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Info("request",
 			zap.String("host", r.Host),
 			zap.String("method", r.Method),
 			zap.String("url", r.URL.String()),
 			zap.String("agent", r.UserAgent()),
 			zap.String("addr", r.RemoteAddr))
-		fn(w, r)
-	}
+		log.Debug("request", zap.Any("headers", r.Header))
+		h.ServeHTTP(w, r)
+	})
 }
 
 func main() {
 	var (
-		app    = kingpin.New(filepath.Base(os.Args[0]), "Provides OIDC authentication configuration for kubectl.").DefaultEnvars()
-		ui     = app.Flag("ui", "Directory from which to serve Javascript UI.").Default("/kuberos/frontend").ExistingDir()
-		listen = app.Flag("listen", "Address at which to expose HTTP webhook.").Default(":10003").String()
-		debug  = app.Flag("debug", "Run with debug logging.").Short('d').Bool()
-		stop   = app.Flag("close-after", "Wait this long at shutdown before closing HTTP connections.").Default("1m").Duration()
-		kill   = app.Flag("kill-after", "Wait this long at shutdown before exiting.").Default("2m").Duration()
-		tlsCrt = app.Flag("tls-cert", "TLS certificate file.").ExistingFile()
-		tlsKey = app.Flag("tls-key", "TLS private key file.").ExistingFile()
+		app         = kingpin.New(filepath.Base(os.Args[0]), "Provides OIDC authentication configuration for kubectl.").DefaultEnvars()
+		listen      = app.Flag("listen", "Address at which to expose HTTP webhook.").Default(":10003").String()
+		debug       = app.Flag("debug", "Run with debug logging.").Short('d').Bool()
 		extraScopes = app.Flag("extra-scopes", "List of additional scopes to provide in token.").Strings()
-		
+		grace       = app.Flag("shutdown-grace-period", "Wait this long for sessions to end before shutting down.").Default("1m").Duration()
+
 		issuerURL        = app.Arg("oidc-issuer-url", "OpenID Connect issuer URL.").URL()
 		clientID         = app.Arg("client-id", "OAuth2 client ID.").String()
 		clientSecretFile = app.Arg("client-secret-file", "File containing OAuth2 client secret.").ExistingFile()
@@ -68,7 +72,7 @@ func main() {
 	kingpin.FatalIfError(err, "cannot create OIDC provider from issuer %v", *issuerURL)
 	log.Debug("established OIDC provider", zap.String("url", provider.Endpoint().TokenURL))
 
-	scopes := kuberos.ScopeRequests{OfflineAsScope: kuberos.OfflineAsScope(provider),ExtraScopes: *extraScopes }
+	scopes := kuberos.ScopeRequests{OfflineAsScope: kuberos.OfflineAsScope(provider), ExtraScopes: *extraScopes}
 	cfg := &oauth2.Config{
 		ClientID:     *clientID,
 		ClientSecret: strings.TrimSpace(string(clientSecret)),
@@ -86,20 +90,60 @@ func main() {
 	kingpin.FatalIfError(err, "cannot load kubecfg template %s", *templateFile)
 
 	r := httprouter.New()
-	// TODO(negz): Log static asset requests.
-	r.ServeFiles("/ui/*filepath", http.Dir(*ui))
-	r.HandlerFunc("GET", "/", logReq(h.Login, log))
-	r.HandlerFunc("GET", "/kubecfg", logReq(h.KubeCfg, log))
-	r.HandlerFunc("GET", "/kubecfg.yaml", logReq(kuberos.Template(tmpl), log))
-	r.HandlerFunc("GET", "/quitquitquit", logReq(func(_ http.ResponseWriter, _ *http.Request) { os.Exit(0) }, log))
+	s := &http.Server{Addr: *listen, Handler: logRequests(r, log)}
 
-	hd := &httpdown.HTTP{StopTimeout: *stop, KillTimeout: *kill}
-	http := &http.Server{Addr: *listen, Handler: r}
-	if *tlsCrt != "" && *tlsKey != "" {
-		crt, err := tls.LoadX509KeyPair(*tlsCrt, *tlsKey)
-		kingpin.FatalIfError(err, "cannot parse TLS certificate and private key")
-		http.TLSConfig = &tls.Config{Certificates: []tls.Certificate{crt}}
+	ctx, cancel := context.WithTimeout(context.Background(), *grace)
+	done := make(chan struct{})
+	shutdown := func() {
+		log.Info("shutdown", zap.Error(s.Shutdown(ctx)))
+		close(done)
 	}
 
-	kingpin.FatalIfError(httpdown.ListenAndServe(http, hd), "HTTP server error")
+	go func() {
+		sigterm := make(chan os.Signal, 1)
+		signal.Notify(sigterm, syscall.SIGTERM)
+		<-sigterm
+		shutdown()
+	}()
+
+	frontend, err := fs.New()
+	kingpin.FatalIfError(err, "cannot load frontend")
+
+	index, err := frontend.Open(indexPath)
+	kingpin.FatalIfError(err, "cannot open frontend index %s", indexPath)
+
+	r.ServeFiles("/dist/*filepath", frontend)
+	r.HandlerFunc("GET", "/ui", content(index, filepath.Base(indexPath)))
+	r.HandlerFunc("GET", "/", h.Login)
+	r.HandlerFunc("GET", "/kubecfg", h.KubeCfg)
+	r.HandlerFunc("GET", "/kubecfg.yaml", kuberos.Template(tmpl))
+	r.HandlerFunc("GET", "/quitquitquit", run(shutdown))
+	r.HandlerFunc("GET", "/healthz", ping())
+
+	log.Info("shutdown", zap.Error(s.ListenAndServe()))
+	<-done
+	cancel()
+}
+
+func content(c io.ReadSeeker, filename string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		http.ServeContent(w, r, filename, time.Unix(0, 0), c)
+		r.Body.Close()
+	}
+}
+
+func run(fn func()) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		go fn()
+		w.WriteHeader(http.StatusOK)
+		r.Body.Close()
+	}
+}
+
+func ping() http.HandlerFunc {
+	// TODO(negz): Check kuberos health?
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		r.Body.Close()
+	}
 }
