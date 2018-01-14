@@ -1,29 +1,38 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 
-set -e
+set -ex
 
 DIST="dist"
 VENDOR="vendor"
 
 export GOOS="linux"
 export GOARCH="amd64"
+export CGO_ENABLED=0
 
-[ -d "${DIST}" ] || mkdir -p "${DIST}"
-[ -d "${VENDOR}" ] && rm -rf "${VENDOR}"
+rm -rf "${DIST}"
+rm -rf "${VENDOR}"
+mkdir -p "${DIST}/frontend"
 
-# Ideally we'd use a specific version of Glide.
+pushd frontend
+npm install
+npm run build
+popd
+
+cp frontend/index.html "${DIST}/frontend/"
+cp frontend/dist/* "${DIST}/frontend/"
+
 go get -u github.com/Masterminds/glide
+go get -u github.com/rakyll/statik
 
 # Create the vendor directory based on glide.lock
 glide install
 
+pushd statik
+go generate
+popd
+
 # Build the binary
 go build -o "${DIST}/kuberos" ./cmd/kuberos
-
-# Build the frontend
-pushd frontend
-    npm run build
-popd
 
 # Create the docker image
 VERSION=$(git rev-parse --short HEAD)
