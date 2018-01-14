@@ -1,19 +1,22 @@
 package: github.com/negz/kuberos
 import:
 - package: github.com/coreos/go-oidc
-- package: github.com/facebookgo/httpdown
 - package: github.com/gorilla/schema
 - package: github.com/julienschmidt/httprouter
   version: v1.1
 - package: github.com/pkg/errors
   version: v0.8.0
+- package: github.com/rakyll/statik
+  version: v0.1.1
+  subpackages:
+  - fs
 - package: go.uber.org/zap
-  version: v1.2.0
+  version: v1.7.1
 - package: golang.org/x/oauth2
 - package: gopkg.in/alecthomas/kingpin.v2
-  version: v2.2.4
+  version: v2.2.6
 - package: k8s.io/client-go
-  version: v3.0.0-beta.0
+  version: v6.0.0
   subpackages:
   - tools/clientcmd
   - tools/clientcmd/api
