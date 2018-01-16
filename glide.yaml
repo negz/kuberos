@@ -20,3 +20,6 @@ import:
   subpackages:
   - tools/clientcmd
   - tools/clientcmd/api
+testImport:
+- package: github.com/go-test/deep
+  version: v1.0.0

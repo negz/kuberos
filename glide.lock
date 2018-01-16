@@ -1,5 +1,5 @@
-hash: b2e5f488e48bc734998887b9746a831c2cd4875e69168cdd0ef0dd37ebd2c9d8
-updated: 2018-01-12T16:48:36.554282-08:00
+hash: 586f06dac64626a980055d13a01b7e19966239a07ac7a1bdffd61c52b1e33219
+updated: 2018-01-16T15:48:55.20164-08:00
 imports:
 - name: github.com/alecthomas/template
   version: a0175ee3bccc567396460bf5acd36800cb10c49c
@@ -260,4 +260,6 @@ imports:
   subpackages:
   - pkg/common
   - pkg/util/proto
-testImports: []
+testImports:
+- name: github.com/go-test/deep
+  version: 9898238679c264cfb10411539f14a0553dc8b295
