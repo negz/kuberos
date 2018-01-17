@@ -85,8 +85,7 @@ func main() {
 	h, err := kuberos.NewHandlers(cfg, e, kuberos.Logger(log))
 	kingpin.FatalIfError(err, "cannot setup HTTP handlers")
 
-	lr := clientcmd.ClientConfigLoadingRules{ExplicitPath: *templateFile}
-	tmpl, err := lr.Load()
+	tmpl, err := clientcmd.LoadFromFile(*templateFile)
 	kingpin.FatalIfError(err, "cannot load kubecfg template %s", *templateFile)
 
 	r := httprouter.New()

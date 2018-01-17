@@ -1,4 +1,3 @@
-// +build integration
 package kuberos
 
 import (
@@ -7,39 +6,14 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	oidc "github.com/coreos/go-oidc"
+	"github.com/go-test/deep"
+	"golang.org/x/oauth2"
+
 	"github.com/negz/kuberos/extractor"
 
-	oidc "github.com/coreos/go-oidc"
-	"golang.org/x/oauth2"
+	"k8s.io/client-go/tools/clientcmd/api"
 )
-
-func TestOfflineAsScope(t *testing.T) {
-	cases := []struct {
-		name           string
-		issuer         string
-		offlineAsScope bool
-	}{
-		// TODO(negz): Call a mock provider instead of Google. oidc.NewProvider()
-		// is the only way to instantiate a provider, and makes a real HTTP call.
-		{
-			name:           "Google",
-			issuer:         "https://accounts.google.com",
-			offlineAsScope: false,
-		},
-	}
-	for _, tt := range cases {
-		t.Run(tt.name, func(t *testing.T) {
-			p, err := oidc.NewProvider(context.Background(), tt.issuer)
-			if err != nil {
-				t.Fatalf("oidc.NewProvider(context.Background(), %v): %s", tt.issuer, err)
-			}
-			actual := OfflineAsScope(p)
-			if tt.offlineAsScope != actual {
-				t.Fatalf("OfflineAsScope(%v): wanted %v, got %v", p.Endpoint(), tt.offlineAsScope, actual)
-			}
-		})
-	}
-}
 
 type predictableExtractor struct {
 	p   *extractor.OIDCAuthenticationParams
@@ -101,6 +75,64 @@ func TestAuthCodeURL(t *testing.T) {
 				if u != tt.url {
 					t.Errorf("u:\nwant %v\ngot %v\n", tt.url, u)
 				}
+			}
+		})
+	}
+}
+func TestPopulateUser(t *testing.T) {
+	cases := []struct {
+		name   string
+		cfg    *api.Config
+		params *extractor.OIDCAuthenticationParams
+		want   api.Config
+	}{
+		{
+			name: "MultiCluster",
+			cfg: &api.Config{
+				Clusters: map[string]*api.Cluster{
+					"a": &api.Cluster{Server: "https://example.org", CertificateAuthorityData: []byte("PAM")},
+					"b": &api.Cluster{Server: "https://example.net", CertificateAuthorityData: []byte("PAM")},
+				},
+			},
+			params: &extractor.OIDCAuthenticationParams{
+				ClientID:     "id",
+				ClientSecret: "secret",
+				IDToken:      "token",
+				RefreshToken: "refresh",
+				IssuerURL:    "https://example.org",
+			},
+			want: api.Config{
+				Clusters: map[string]*api.Cluster{
+					"a": &api.Cluster{Server: "https://example.org", CertificateAuthorityData: []byte("PAM")},
+					"b": &api.Cluster{Server: "https://example.net", CertificateAuthorityData: []byte("PAM")},
+				},
+				Contexts: map[string]*api.Context{
+					"a": &api.Context{AuthInfo: templateUser, Cluster: "a"},
+					"b": &api.Context{AuthInfo: templateUser, Cluster: "b"},
+				},
+				AuthInfos: map[string]*api.AuthInfo{
+					templateUser: &api.AuthInfo{
+						AuthProvider: &api.AuthProviderConfig{
+							Name: templateAuthProvider,
+							Config: map[string]string{
+								templateOIDCClientID:     "id",
+								templateOIDCClientSecret: "secret",
+								templateOIDCIDToken:      "token",
+								templateOIDCRefreshToken: "refresh",
+								templateOIDCIssuer:       "https://example.org",
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			got := populateUser(tt.cfg, tt.params)
+			if diff := deep.Equal(got, tt.want); diff != nil {
+				t.Errorf("populateUser(...): got != want: %v", diff)
 			}
 		})
 	}

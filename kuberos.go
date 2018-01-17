@@ -320,28 +320,7 @@ func Template(cfg *api.Config) http.HandlerFunc {
 			return
 		}
 
-		c := &api.Config{}
-		c.AuthInfos = make(map[string]*api.AuthInfo)
-		c.Clusters = make(map[string]*api.Cluster)
-		c.Contexts = make(map[string]*api.Context)
-		c.AuthInfos[templateUser] = &api.AuthInfo{
-			AuthProvider: &api.AuthProviderConfig{
-				Name: templateAuthProvider,
-				Config: map[string]string{
-					templateOIDCClientID:     p.ClientID,
-					templateOIDCClientSecret: p.ClientSecret,
-					templateOIDCIDToken:      p.IDToken,
-					templateOIDCRefreshToken: p.RefreshToken,
-					templateOIDCIssuer:       p.IssuerURL,
-				},
-			},
-		}
-		for name, cluster := range cfg.Clusters {
-			c.Clusters[name] = cluster
-			c.Contexts[name] = &api.Context{Cluster: name, AuthInfo: templateUser}
-		}
-
-		y, err := clientcmd.Write(*c)
+		y, err := clientcmd.Write(populateUser(cfg, p))
 		if err != nil {
 			http.Error(w, errors.Wrap(err, "cannot marshal template to YAML").Error(), http.StatusInternalServerError)
 			return
@@ -353,4 +332,28 @@ func Template(cfg *api.Config) http.HandlerFunc {
 			http.Error(w, errors.Wrap(err, "cannot write response").Error(), http.StatusInternalServerError)
 		}
 	}
+}
+
+func populateUser(cfg *api.Config, p *extractor.OIDCAuthenticationParams) api.Config {
+	c := api.Config{}
+	c.AuthInfos = make(map[string]*api.AuthInfo)
+	c.Clusters = make(map[string]*api.Cluster)
+	c.Contexts = make(map[string]*api.Context)
+	c.AuthInfos[templateUser] = &api.AuthInfo{
+		AuthProvider: &api.AuthProviderConfig{
+			Name: templateAuthProvider,
+			Config: map[string]string{
+				templateOIDCClientID:     p.ClientID,
+				templateOIDCClientSecret: p.ClientSecret,
+				templateOIDCIDToken:      p.IDToken,
+				templateOIDCRefreshToken: p.RefreshToken,
+				templateOIDCIssuer:       p.IssuerURL,
+			},
+		},
+	}
+	for name, cluster := range cfg.Clusters {
+		c.Clusters[name] = cluster
+		c.Contexts[name] = &api.Context{Cluster: name, AuthInfo: templateUser}
+	}
+	return c
 }
