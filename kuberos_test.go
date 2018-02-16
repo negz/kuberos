@@ -95,6 +95,7 @@ func TestPopulateUser(t *testing.T) {
 				},
 			},
 			params: &extractor.OIDCAuthenticationParams{
+				Username:     "example@example.org",
 				ClientID:     "id",
 				ClientSecret: "secret",
 				IDToken:      "token",
@@ -107,11 +108,11 @@ func TestPopulateUser(t *testing.T) {
 					"b": &api.Cluster{Server: "https://example.net", CertificateAuthorityData: []byte("PAM")},
 				},
 				Contexts: map[string]*api.Context{
-					"a": &api.Context{AuthInfo: templateUser, Cluster: "a"},
-					"b": &api.Context{AuthInfo: templateUser, Cluster: "b"},
+					"a": &api.Context{AuthInfo: "example@example.org", Cluster: "a"},
+					"b": &api.Context{AuthInfo: "example@example.org", Cluster: "b"},
 				},
 				AuthInfos: map[string]*api.AuthInfo{
-					templateUser: &api.AuthInfo{
+					"example@example.org": &api.AuthInfo{
 						AuthProvider: &api.AuthProviderConfig{
 							Name: templateAuthProvider,
 							Config: map[string]string{

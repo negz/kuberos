@@ -35,7 +35,6 @@ const (
 	urlParamErrorDescription = "error_description"
 	urlParamErrorURI         = "error_uri"
 
-	templateUser             = "kuberos"
 	templateAuthProvider     = "oidc"
 	templateOIDCClientID     = "client-id"
 	templateOIDCClientSecret = "client-secret"
@@ -339,7 +338,7 @@ func populateUser(cfg *api.Config, p *extractor.OIDCAuthenticationParams) api.Co
 	c.AuthInfos = make(map[string]*api.AuthInfo)
 	c.Clusters = make(map[string]*api.Cluster)
 	c.Contexts = make(map[string]*api.Context)
-	c.AuthInfos[templateUser] = &api.AuthInfo{
+	c.AuthInfos[p.Username] = &api.AuthInfo{
 		AuthProvider: &api.AuthProviderConfig{
 			Name: templateAuthProvider,
 			Config: map[string]string{
@@ -353,7 +352,7 @@ func populateUser(cfg *api.Config, p *extractor.OIDCAuthenticationParams) api.Co
 	}
 	for name, cluster := range cfg.Clusters {
 		c.Clusters[name] = cluster
-		c.Contexts[name] = &api.Context{Cluster: name, AuthInfo: templateUser}
+		c.Contexts[name] = &api.Context{Cluster: name, AuthInfo: p.Username}
 	}
 	return c
 }
