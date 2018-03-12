@@ -45,6 +45,7 @@ echo $OIDC_CLIENT_SECRET >/tmp/cfg/secret
 cat <<EOF >/tmp/cfg/template
 apiVersion: v1
 kind: Config
+current-context: kuberos  # Optional - must be the name of one of the template's clusters.
 clusters:
 - name: kuberos
   cluster:
@@ -80,12 +81,14 @@ Args:
                           user and contexts.
 ```
 
-The partial `kubeconfig` template should contain only cluster entries. For
-example:
+The partial `kubeconfig` template should contain only cluster entries and
+optionally a current (i.e. default) context, which must be the name of one of
+the clusters. For example:
 
 ```yaml
 apiVersion: v1
 kind: Config
+current-context: staging
 clusters:
 - name: production
   cluster:
@@ -104,6 +107,10 @@ the clusters, thus a user could interact with the production cluster by running:
 ```bash
 kubectl --context production cluster-info
 ```
+
+If the `current-context` is set to the name of one of the clusters then the
+`--context` argument may be omitted, and the cluster named by `current-context`
+will be used.
 
 ## Alternatives
 OIDC helpers that run locally to setup `kubectl`:
