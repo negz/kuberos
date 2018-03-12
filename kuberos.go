@@ -54,7 +54,7 @@ var (
 	ErrInvalidKubeCfgEndpoint = errors.New("invalid redirect endpoint")
 
 	// ErrInvalidState indicates the provided state param was not as expected.
-	ErrInvalidState = errors.New("invalid state parameter")
+	ErrInvalidState = errors.New("invalid state parameter: user agent or IP address changed between requests")
 
 	// ErrMissingCode indicates a response without an OAuth 2.0 authorization
 	// code

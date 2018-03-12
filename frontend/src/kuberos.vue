@@ -1,7 +1,7 @@
 <template>
   <div id="kuberos">
     <b-alert v-if="error" show variant="danger">
-      <p>Could not connect to authentication API: {{error.response.status}} {{error.response.statusText}}</p>
+      <p>Authentication failed: {{error.response.status}} {{error.response.statusText}}: {{error.response.data}}</p>
     </b-alert>
     <b-container v-else fluid>
       <b-row><br /></b-row>
