@@ -338,6 +338,7 @@ func populateUser(cfg *api.Config, p *extractor.OIDCAuthenticationParams) api.Co
 	c.AuthInfos = make(map[string]*api.AuthInfo)
 	c.Clusters = make(map[string]*api.Cluster)
 	c.Contexts = make(map[string]*api.Context)
+	c.CurrentContext = cfg.CurrentContext
 	c.AuthInfos[p.Username] = &api.AuthInfo{
 		AuthProvider: &api.AuthProviderConfig{
 			Name: templateAuthProvider,

@@ -127,6 +127,49 @@ func TestPopulateUser(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "MultiClusterWithContext",
+			cfg: &api.Config{
+				Clusters: map[string]*api.Cluster{
+					"a": &api.Cluster{Server: "https://example.org", CertificateAuthorityData: []byte("PAM")},
+					"b": &api.Cluster{Server: "https://example.net", CertificateAuthorityData: []byte("PAM")},
+				},
+				CurrentContext: "a",
+			},
+			params: &extractor.OIDCAuthenticationParams{
+				Username:     "example@example.org",
+				ClientID:     "id",
+				ClientSecret: "secret",
+				IDToken:      "token",
+				RefreshToken: "refresh",
+				IssuerURL:    "https://example.org",
+			},
+			want: api.Config{
+				Clusters: map[string]*api.Cluster{
+					"a": &api.Cluster{Server: "https://example.org", CertificateAuthorityData: []byte("PAM")},
+					"b": &api.Cluster{Server: "https://example.net", CertificateAuthorityData: []byte("PAM")},
+				},
+				Contexts: map[string]*api.Context{
+					"a": &api.Context{AuthInfo: "example@example.org", Cluster: "a"},
+					"b": &api.Context{AuthInfo: "example@example.org", Cluster: "b"},
+				},
+				AuthInfos: map[string]*api.AuthInfo{
+					"example@example.org": &api.AuthInfo{
+						AuthProvider: &api.AuthProviderConfig{
+							Name: templateAuthProvider,
+							Config: map[string]string{
+								templateOIDCClientID:     "id",
+								templateOIDCClientSecret: "secret",
+								templateOIDCIDToken:      "token",
+								templateOIDCRefreshToken: "refresh",
+								templateOIDCIssuer:       "https://example.org",
+							},
+						},
+					},
+				},
+				CurrentContext: "a",
+			},
+		},
 	}
 
 	for _, tt := range cases {
