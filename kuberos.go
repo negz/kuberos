@@ -49,7 +49,7 @@ const (
 var (
 	// DefaultScopes are the minimum required oauth2 scopes for every
 	// authentication request.
-	DefaultScopes = []string{oidc.ScopeOpenID, "profile", "email"}
+	DefaultScopes = []string{oidc.ScopeOpenID}
 
 	// ErrInvalidKubeCfgEndpoint indicates an unparseable redirect endpoint.
 	ErrInvalidKubeCfgEndpoint = errors.New("invalid redirect endpoint")

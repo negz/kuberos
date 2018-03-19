@@ -46,7 +46,7 @@ func main() {
 		app         = kingpin.New(filepath.Base(os.Args[0]), "Provides OIDC authentication configuration for kubectl.").DefaultEnvars()
 		listen      = app.Flag("listen", "Address at which to expose HTTP webhook.").Default(":10003").String()
 		debug       = app.Flag("debug", "Run with debug logging.").Short('d').Bool()
-		extraScopes = app.Flag("extra-scopes", "List of additional scopes to provide in token.").Strings()
+		extraScopes = app.Flag("scopes", "List of additional scopes to provide in token.").Default("profile", "email").Strings()
 		grace       = app.Flag("shutdown-grace-period", "Wait this long for sessions to end before shutting down.").Default("1m").Duration()
 
 		issuerURL        = app.Arg("oidc-issuer-url", "OpenID Connect issuer URL.").URL()

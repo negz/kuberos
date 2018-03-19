@@ -41,7 +41,7 @@ func TestAuthCodeURL(t *testing.T) {
 				RedirectURL:  "https://example.org/redirect",
 			},
 			s:   func(_ *http.Request) string { return "state" },
-			url: "https://auth.example.org?access_type=offline&client_id=testClientID&prompt=consent&redirect_uri=http%3A%2F%2Fexample.com%2Fui&response_type=code&scope=openid+profile+email&state=state",
+			url: "https://auth.example.org?access_type=offline&client_id=testClientID&prompt=consent&redirect_uri=http%3A%2F%2Fexample.com%2Fui&response_type=code&scope=openid&state=state",
 		},
 		{
 			name: "CustomScopes",
