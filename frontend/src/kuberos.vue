@@ -121,6 +121,9 @@ export default {
       .get(url)
       .then(function(response) {
         _this.kubecfg = response.data;
+        if(_this.kubecfg.email == "") {
+          _this.kubecfg.email = "kuberos";
+        }
       })
       .catch(function(error) {
         _this.error = error;
