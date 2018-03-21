@@ -18,7 +18,7 @@ RUN go get -u github.com/Masterminds/glide && \
 RUN cd statik && go generate && cd ..
 RUN go build -o /kuberos ./cmd/kuberos
 
-FROM alpine:3.7 as ca-certificates
+FROM alpine:3.7
 MAINTAINER Nic Cope <n+docker@rk0n.org>
 
 RUN apk --no-cache add ca-certificates
