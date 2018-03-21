@@ -72,7 +72,7 @@ export default {
   },
   methods: {
     templateURL: function() {
-      return "/kubecfg.yaml?" + $.param(this.kubecfg);
+      return "kubecfg.yaml?" + $.param(this.kubecfg);
     },
     snippetSetCreds: function() {
       return (
@@ -114,7 +114,7 @@ export default {
     if (q != "") {
       query = JSON.parse('{"' + q + '"}');
     }
-    var url = "/kubecfg?" + $.param(query);
+    var url = "kubecfg?" + $.param(query);
 
     var _this = this;
     this.axios
