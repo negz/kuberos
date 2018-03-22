@@ -24,7 +24,9 @@ jobs:
     - stage: push
       install: skip
       script:
-        - ./scripts/build.sh
+        - VERSION=$(git rev-parse --short HEAD)
+        - docker build --tag "negz/kuberos:latest" .
+        - docker build --tag "negz/kuberos:${VERSION}" .
         - docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
         - ./scripts/push.sh
 
