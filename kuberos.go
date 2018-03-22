@@ -21,13 +21,14 @@ import (
 const (
 	// DefaultKubeCfgEndpoint is the default endpoint to which clients should
 	// be redirected after authentication.
-	DefaultKubeCfgEndpoint = "/ui"
+	DefaultKubeCfgEndpoint = "ui"
 
 	schemeHTTP  = "http"
 	schemeHTTPS = "https"
 
-	elbHeaderForwardedProto = "X-Forwarded-Proto"
-	elbHeaderForwardedFor   = "X-Forwarded-For"
+	headerForwardedProto = "X-Forwarded-Proto"
+	headerForwardedFor   = "X-Forwarded-For"
+	headerForwardedPrefix   = "X-Forwarded-Prefix"
 
 	urlParamState            = "state"
 	urlParamCode             = "code"
@@ -81,7 +82,7 @@ func defaultStateFn(secret []byte) StateFn {
 		// Use the forwarded for header instead of the remote address if it is
 		// supplied.
 		for h, v := range r.Header {
-			if h == elbHeaderForwardedFor {
+			if h == headerForwardedFor {
 				for _, host := range v {
 					remote = host
 				}
@@ -290,14 +291,20 @@ func redirectURL(r *http.Request, endpoint *url.URL) string {
 		u.Scheme = schemeHTTPS
 	}
 
-	// Redirect to HTTPS if we're listening on HTTP behind an HTTPS ELB.
 	for h, v := range r.Header {
-		if h == elbHeaderForwardedProto {
-			for _, proto := range v {
-				if proto == schemeHTTPS {
-					u.Scheme = schemeHTTPS
+		switch h {
+			case headerForwardedProto:
+				// Redirect to HTTPS if we're listening on HTTP behind an HTTPS ELB.
+				for _, proto := range v {
+					if proto == schemeHTTPS {
+						u.Scheme = schemeHTTPS
+					}
 				}
-			}
+			case headerForwardedPrefix:
+				// Redirect includes X-Forwarded-Prefix if exists
+				for _, prefix := range v {
+					u.Path = prefix
+				}
 		}
 	}
 	// TODO(negz): Set port if X-Forwarded-Port exists?
