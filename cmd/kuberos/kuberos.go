@@ -43,11 +43,11 @@ func logRequests(h http.Handler, log *zap.Logger) http.Handler {
 
 func main() {
 	var (
-		app         = kingpin.New(filepath.Base(os.Args[0]), "Provides OIDC authentication configuration for kubectl.").DefaultEnvars()
-		listen      = app.Flag("listen", "Address at which to expose HTTP webhook.").Default(":10003").String()
-		debug       = app.Flag("debug", "Run with debug logging.").Short('d').Bool()
-		extraScopes = app.Flag("scopes", "List of additional scopes to provide in token.").Default("profile", "email").Strings()
-		grace       = app.Flag("shutdown-grace-period", "Wait this long for sessions to end before shutting down.").Default("1m").Duration()
+		app    = kingpin.New(filepath.Base(os.Args[0]), "Provides OIDC authentication configuration for kubectl.").DefaultEnvars()
+		listen = app.Flag("listen", "Address at which to expose HTTP webhook.").Default(":10003").String()
+		debug  = app.Flag("debug", "Run with debug logging.").Short('d').Bool()
+		scopes = app.Flag("scopes", "List of additional scopes to provide in token.").Default("profile", "email").Strings()
+		grace  = app.Flag("shutdown-grace-period", "Wait this long for sessions to end before shutting down.").Default("1m").Duration()
 
 		issuerURL        = app.Arg("oidc-issuer-url", "OpenID Connect issuer URL.").URL()
 		clientID         = app.Arg("client-id", "OAuth2 client ID.").String()
@@ -72,12 +72,12 @@ func main() {
 	kingpin.FatalIfError(err, "cannot create OIDC provider from issuer %v", *issuerURL)
 	log.Debug("established OIDC provider", zap.String("url", provider.Endpoint().TokenURL))
 
-	scopes := kuberos.ScopeRequests{OfflineAsScope: kuberos.OfflineAsScope(provider), ExtraScopes: *extraScopes}
+	sr := kuberos.ScopeRequests{OfflineAsScope: kuberos.OfflineAsScope(provider), Scopes: *scopes}
 	cfg := &oauth2.Config{
 		ClientID:     *clientID,
 		ClientSecret: strings.TrimSpace(string(clientSecret)),
 		Endpoint:     provider.Endpoint(),
-		Scopes:       scopes.Get(),
+		Scopes:       sr.Get(),
 	}
 	e, err := extractor.NewOIDC(provider.Verifier(&oidc.Config{ClientID: *clientID}), extractor.Logger(log))
 	kingpin.FatalIfError(err, "cannot setup OIDC extractor")

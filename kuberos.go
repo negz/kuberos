@@ -26,9 +26,9 @@ const (
 	schemeHTTP  = "http"
 	schemeHTTPS = "https"
 
-	headerForwardedProto = "X-Forwarded-Proto"
-	headerForwardedFor   = "X-Forwarded-For"
-	headerForwardedPrefix   = "X-Forwarded-Prefix"
+	headerForwardedProto  = "X-Forwarded-Proto"
+	headerForwardedFor    = "X-Forwarded-For"
+	headerForwardedPrefix = "X-Forwarded-Prefix"
 
 	urlParamState            = "state"
 	urlParamCode             = "code"
@@ -124,7 +124,7 @@ func OfflineAsScope(p *oidc.Provider) bool {
 // ScopeRequests configures the oauth2 scopes to request during authentication.
 type ScopeRequests struct {
 	OfflineAsScope bool
-	ExtraScopes    []string
+	Scopes         []string
 }
 
 // Get the scopes to request during authentication.
@@ -133,7 +133,7 @@ func (r *ScopeRequests) Get() []string {
 	if r.OfflineAsScope {
 		scopes = append(scopes, oidc.ScopeOfflineAccess)
 	}
-	return append(scopes, r.ExtraScopes...)
+	return append(scopes, r.Scopes...)
 }
 
 // Handlers provides HTTP handlers for the Kubernary service.
@@ -293,18 +293,18 @@ func redirectURL(r *http.Request, endpoint *url.URL) string {
 
 	for h, v := range r.Header {
 		switch h {
-			case headerForwardedProto:
-				// Redirect to HTTPS if we're listening on HTTP behind an HTTPS ELB.
-				for _, proto := range v {
-					if proto == schemeHTTPS {
-						u.Scheme = schemeHTTPS
-					}
+		case headerForwardedProto:
+			// Redirect to HTTPS if we're listening on HTTP behind an HTTPS ELB.
+			for _, proto := range v {
+				if proto == schemeHTTPS {
+					u.Scheme = schemeHTTPS
 				}
-			case headerForwardedPrefix:
-				// Redirect includes X-Forwarded-Prefix if exists
-				for _, prefix := range v {
-					u.Path = prefix
-				}
+			}
+		case headerForwardedPrefix:
+			// Redirect includes X-Forwarded-Prefix if exists
+			for _, prefix := range v {
+				u.Path = prefix
+			}
 		}
 	}
 	// TODO(negz): Set port if X-Forwarded-Port exists?
