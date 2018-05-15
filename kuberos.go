@@ -4,8 +4,11 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 
 	"github.com/negz/kuberos/extractor"
 
@@ -14,6 +17,7 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"golang.org/x/oauth2"
+	"k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
@@ -22,6 +26,9 @@ const (
 	// DefaultKubeCfgEndpoint is the default endpoint to which clients should
 	// be redirected after authentication.
 	DefaultKubeCfgEndpoint = "ui"
+
+	// DefaultAPITokenMountPath is the default mount path for API tokens
+	DefaultAPITokenMountPath = "/var/run/secrets/kubernetes.io/serviceaccount"
 
 	schemeHTTP  = "http"
 	schemeHTTPS = "https"
@@ -358,9 +365,24 @@ func populateUser(cfg *api.Config, p *extractor.OIDCAuthenticationParams) api.Co
 			},
 		},
 	}
+
 	for name, cluster := range cfg.Clusters {
+		// If the cluster definition does not come with certificate-authority-data nor
+		// certificate-authority, then check if kuberos has access to the cluster's CA
+		// certificate and include it when possible. Assume all errors are non-fatal.
+		if len(cluster.CertificateAuthorityData) == 0 && cluster.CertificateAuthority == "" {
+			caPath := filepath.Join(DefaultAPITokenMountPath, v1.ServiceAccountRootCAKey)
+			if caFile, err := os.Open(caPath); err == nil {
+				if caCert, err := ioutil.ReadAll(caFile); err == nil {
+					cluster.CertificateAuthorityData = caCert
+				}
+			}
+		}
 		c.Clusters[name] = cluster
-		c.Contexts[name] = &api.Context{Cluster: name, AuthInfo: p.Username}
+		c.Contexts[name] = &api.Context{
+			Cluster:  name,
+			AuthInfo: p.Username,
+		}
 	}
 	return c
 }

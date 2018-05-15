@@ -125,6 +125,7 @@ func TestPopulateUser(t *testing.T) {
 						},
 					},
 				},
+				CurrentContext: "a",
 			},
 		},
 		{
