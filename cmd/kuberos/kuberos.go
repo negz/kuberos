@@ -47,7 +47,9 @@ func main() {
 		listen = app.Flag("listen", "Address at which to expose HTTP webhook.").Default(":10003").String()
 		debug  = app.Flag("debug", "Run with debug logging.").Short('d').Bool()
 		scopes = app.Flag("scopes", "List of additional scopes to provide in token.").Default("profile", "email").Strings()
-		grace  = app.Flag("shutdown-grace-period", "Wait this long for sessions to end before shutting down.").Default("1m").Duration()
+
+		grace            = app.Flag("shutdown-grace-period", "Wait this long for sessions to end before shutting down.").Default("1m").Duration()
+		shutdownEndpoint = app.Flag("shutdown-endpoint", "Insecure HTTP endpoint path (e.g., /quitquitquit) that responds to a GET to shut down kuberos.").String()
 
 		issuerURL        = app.Arg("oidc-issuer-url", "OpenID Connect issuer URL.").URL()
 		clientID         = app.Arg("client-id", "OAuth2 client ID.").String()
@@ -116,8 +118,11 @@ func main() {
 	r.HandlerFunc("GET", "/", h.Login)
 	r.HandlerFunc("GET", "/kubecfg", h.KubeCfg)
 	r.HandlerFunc("GET", "/kubecfg.yaml", kuberos.Template(tmpl))
-	r.HandlerFunc("GET", "/quitquitquit", run(shutdown))
 	r.HandlerFunc("GET", "/healthz", ping())
+
+	if *shutdownEndpoint != "" {
+		r.HandlerFunc("GET", *shutdownEndpoint, run(shutdown))
+	}
 
 	log.Info("shutdown", zap.Error(s.ListenAndServe()))
 	<-done
