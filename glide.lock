@@ -1,5 +1,5 @@
-hash: 586f06dac64626a980055d13a01b7e19966239a07ac7a1bdffd61c52b1e33219
-updated: 2018-01-16T15:48:55.20164-08:00
+hash: 76fa71a7a967d86b98a17d084d6ff4a1a572f96418730d4fad33c82ff5d282cc
+updated: 2018-05-16T01:07:31.651399512-07:00
 imports:
 - name: github.com/alecthomas/template
   version: a0175ee3bccc567396460bf5acd36800cb10c49c
@@ -80,6 +80,10 @@ imports:
   version: fd36b3595eb2ec8da4b8153b107f7ea08504899d
   subpackages:
   - fs
+- name: github.com/spf13/afero
+  version: 63644898a8da0bc22138abf860edaf5277b6102e
+  subpackages:
+  - mem
 - name: github.com/spf13/pflag
   version: 9ff6c6923cfffbcd502984b8e0c80539a94968b7
 - name: go.uber.org/atomic
