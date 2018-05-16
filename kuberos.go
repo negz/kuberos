@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"os"
 	"path/filepath"
 
 	"github.com/negz/kuberos/extractor"
@@ -15,6 +14,7 @@ import (
 	oidc "github.com/coreos/go-oidc"
 	"github.com/gorilla/schema"
 	"github.com/pkg/errors"
+	"github.com/spf13/afero"
 	"go.uber.org/zap"
 	"golang.org/x/oauth2"
 	"k8s.io/api/core/v1"
@@ -73,6 +73,8 @@ var (
 	ErrNoYAMLSerializer = errors.New("no YAML serializer registered")
 
 	decoder = schema.NewDecoder()
+
+	appFs = afero.NewOsFs()
 
 	approvalConsent = oauth2.SetAuthURLParam("prompt", "consent")
 )
@@ -372,10 +374,12 @@ func populateUser(cfg *api.Config, p *extractor.OIDCAuthenticationParams) api.Co
 		// certificate and include it when possible. Assume all errors are non-fatal.
 		if len(cluster.CertificateAuthorityData) == 0 && cluster.CertificateAuthority == "" {
 			caPath := filepath.Join(DefaultAPITokenMountPath, v1.ServiceAccountRootCAKey)
-			if caFile, err := os.Open(caPath); err == nil {
+			if caFile, err := appFs.Open(caPath); err == nil {
 				if caCert, err := ioutil.ReadAll(caFile); err == nil {
 					cluster.CertificateAuthorityData = caCert
 				}
+			} else {
+				fmt.Printf("Error: %+v\n", err)
 			}
 		}
 		c.Clusters[name] = cluster

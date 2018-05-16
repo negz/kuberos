@@ -8,6 +8,7 @@ import (
 
 	oidc "github.com/coreos/go-oidc"
 	"github.com/go-test/deep"
+	"github.com/spf13/afero"
 	"golang.org/x/oauth2"
 
 	"github.com/negz/kuberos/extractor"
@@ -83,6 +84,7 @@ func TestPopulateUser(t *testing.T) {
 	cases := []struct {
 		name   string
 		cfg    *api.Config
+		files  map[string]string
 		params *extractor.OIDCAuthenticationParams
 		want   api.Config
 	}{
@@ -94,6 +96,50 @@ func TestPopulateUser(t *testing.T) {
 					"b": &api.Cluster{Server: "https://example.net", CertificateAuthorityData: []byte("PAM")},
 				},
 			},
+			files: map[string]string{},
+			params: &extractor.OIDCAuthenticationParams{
+				Username:     "example@example.org",
+				ClientID:     "id",
+				ClientSecret: "secret",
+				IDToken:      "token",
+				RefreshToken: "refresh",
+				IssuerURL:    "https://example.org",
+			},
+			want: api.Config{
+				Clusters: map[string]*api.Cluster{
+					"a": &api.Cluster{Server: "https://example.org", CertificateAuthorityData: []byte("PAM")},
+					"b": &api.Cluster{Server: "https://example.net", CertificateAuthorityData: []byte("PAM")},
+				},
+				Contexts: map[string]*api.Context{
+					"a": &api.Context{AuthInfo: "example@example.org", Cluster: "a"},
+					"b": &api.Context{AuthInfo: "example@example.org", Cluster: "b"},
+				},
+				AuthInfos: map[string]*api.AuthInfo{
+					"example@example.org": &api.AuthInfo{
+						AuthProvider: &api.AuthProviderConfig{
+							Name: templateAuthProvider,
+							Config: map[string]string{
+								templateOIDCClientID:     "id",
+								templateOIDCClientSecret: "secret",
+								templateOIDCIDToken:      "token",
+								templateOIDCRefreshToken: "refresh",
+								templateOIDCIssuer:       "https://example.org",
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "MultiClusterWithContext",
+			cfg: &api.Config{
+				Clusters: map[string]*api.Cluster{
+					"a": &api.Cluster{Server: "https://example.org", CertificateAuthorityData: []byte("PAM")},
+					"b": &api.Cluster{Server: "https://example.net", CertificateAuthorityData: []byte("PAM")},
+				},
+				CurrentContext: "a",
+			},
+			files: map[string]string{},
 			params: &extractor.OIDCAuthenticationParams{
 				Username:     "example@example.org",
 				ClientID:     "id",
@@ -129,13 +175,14 @@ func TestPopulateUser(t *testing.T) {
 			},
 		},
 		{
-			name: "MultiClusterWithContext",
+			name: "SingleClusterWithCAOnDisk",
 			cfg: &api.Config{
 				Clusters: map[string]*api.Cluster{
-					"a": &api.Cluster{Server: "https://example.org", CertificateAuthorityData: []byte("PAM")},
-					"b": &api.Cluster{Server: "https://example.net", CertificateAuthorityData: []byte("PAM")},
+					"a": &api.Cluster{Server: "https://example.org"},
 				},
-				CurrentContext: "a",
+			},
+			files: map[string]string{
+				"/var/run/secrets/kubernetes.io/serviceaccount/ca.crt": "PEM",
 			},
 			params: &extractor.OIDCAuthenticationParams{
 				Username:     "example@example.org",
@@ -147,12 +194,10 @@ func TestPopulateUser(t *testing.T) {
 			},
 			want: api.Config{
 				Clusters: map[string]*api.Cluster{
-					"a": &api.Cluster{Server: "https://example.org", CertificateAuthorityData: []byte("PAM")},
-					"b": &api.Cluster{Server: "https://example.net", CertificateAuthorityData: []byte("PAM")},
+					"a": &api.Cluster{Server: "https://example.org", CertificateAuthorityData: []byte("PEM")},
 				},
 				Contexts: map[string]*api.Context{
 					"a": &api.Context{AuthInfo: "example@example.org", Cluster: "a"},
-					"b": &api.Context{AuthInfo: "example@example.org", Cluster: "b"},
 				},
 				AuthInfos: map[string]*api.AuthInfo{
 					"example@example.org": &api.AuthInfo{
@@ -168,13 +213,58 @@ func TestPopulateUser(t *testing.T) {
 						},
 					},
 				},
-				CurrentContext: "a",
+			},
+		},
+		{
+			name: "SingleClusterWithoutCA",
+			cfg: &api.Config{
+				Clusters: map[string]*api.Cluster{
+					"a": &api.Cluster{Server: "https://example.org"},
+				},
+			},
+			files: map[string]string{},
+			params: &extractor.OIDCAuthenticationParams{
+				Username:     "example@example.org",
+				ClientID:     "id",
+				ClientSecret: "secret",
+				IDToken:      "token",
+				RefreshToken: "refresh",
+				IssuerURL:    "https://example.org",
+			},
+			want: api.Config{
+				Clusters: map[string]*api.Cluster{
+					"a": &api.Cluster{Server: "https://example.org"},
+				},
+				Contexts: map[string]*api.Context{
+					"a": &api.Context{AuthInfo: "example@example.org", Cluster: "a"},
+				},
+				AuthInfos: map[string]*api.AuthInfo{
+					"example@example.org": &api.AuthInfo{
+						AuthProvider: &api.AuthProviderConfig{
+							Name: templateAuthProvider,
+							Config: map[string]string{
+								templateOIDCClientID:     "id",
+								templateOIDCClientSecret: "secret",
+								templateOIDCIDToken:      "token",
+								templateOIDCRefreshToken: "refresh",
+								templateOIDCIssuer:       "https://example.org",
+							},
+						},
+					},
+				},
 			},
 		},
 	}
 
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
+			appFs = afero.NewMemMapFs()
+			for filename, content := range tt.files {
+				if err := afero.WriteFile(appFs, filename, []byte(content), 0644); err != nil {
+					t.Errorf("error writing file %q: %v", filename, err)
+				}
+			}
+
 			got := populateUser(tt.cfg, tt.params)
 			if diff := deep.Equal(got, tt.want); diff != nil {
 				t.Errorf("populateUser(...): got != want: %v", diff)
