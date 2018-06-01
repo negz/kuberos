@@ -112,10 +112,14 @@ If the `current-context` is set to the name of one of the clusters then the
 `--context` argument may be omitted, and the cluster named by `current-context`
 will be used.
 
-## Kubernetes (example)
-Kuberos can be ran inside a cluster as long as it can still communicate with your OIDC provider from inside the pod and your OIDC provider is set to redirect to your Kuberos endpoint (NodePort, LoadBalancer, etc).
+## Deploying to Kubernetes
+Kuberos can be run inside a cluster as long as it can still communicate with
+your OIDC provider from inside the pod and your OIDC provider is set to
+redirect to your Kuberos endpoint (NodePort, LoadBalancer, etc).
 
-The configuration below is meant to serve as a template and **not** something that is plug-and-play. You will need to adjust your DNS / nameserver helpers, Dex information, and optionally how you ingress your traffic.
+The configuration below is meant to serve as a template and **not** something
+that is plug-and-play. You will need to adjust your DNS / nameserver helpers,
+Dex information, and optionally how you ingress your traffic.
 
 ```yaml
 apiVersion: extensions/v1beta1
@@ -131,23 +135,21 @@ spec:
       labels:
         app: kuberos
     spec:
-      hostAliases:                  #
-      - ip: "192.168.1.1"           # OPTIONAL TO HELP ROUTE TRAFFIC TO DEX / OIDC
-        hostnames:                  #
-        - "dex.oidc.example.com"    # OPTIONAL TO HELP ROUTE TRAFFIC TO DEX / OIDC
+      # hostAliases are optional, to help route traffic to Dex / OIDC
+      hostAliases:
+      - ip: "192.168.1.1"
+        hostnames:
+        - "dex.oidc.example.com"
       containers:
       - image: negz/kuberos:latest
         name: kuberos
         command: ["/kuberos", "https://dex.oidc.example.com", "example-app", "/cfg/secret", "/cfg/template"]
         ports:
         - name: http
-          containerPort: 10003      # DEFAULT FOR KUBEROS 10003, MATCHES NODEPORT SERVICE
+          containerPort: 10003
         volumeMounts:
         - name: config
           mountPath: /cfg
-      dnsConfig:
-        nameservers:
-          - 8.8.8.8                 # USING GOOGLE DNS FOR LOOKUPS
       volumes:
       - name: config
         configMap:
@@ -176,22 +178,7 @@ data:
       cluster:
         certificate-authority-data: REDACTED
         server: https://staging.example.org
-  secret: ZXhhbXBsZS1hcHAtc2VjcmV0
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: kuberos
-spec:
-  type: NodePort
-  ports:
-  - name: kuberos
-    port: 10003
-    protocol: TCP
-    targetPort: 10003               # INTERNAL PORT
-    nodePort: 31001                 # EXTERNAL / NODEPORT
-  selector:
-    app: kuberos
+  secret: REDACTED
 ```
 
 ## Alternatives
