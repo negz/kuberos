@@ -112,6 +112,75 @@ If the `current-context` is set to the name of one of the clusters then the
 `--context` argument may be omitted, and the cluster named by `current-context`
 will be used.
 
+## Deploying to Kubernetes
+Kuberos can be run inside a cluster as long as it can still communicate with
+your OIDC provider from inside the pod and your OIDC provider is set to
+redirect to your Kuberos endpoint (NodePort, LoadBalancer, etc).
+
+The configuration below is meant to serve as a template and **not** something
+that is plug-and-play. You will need to adjust your DNS / nameserver helpers,
+Dex information, and optionally how you ingress your traffic.
+
+```yaml
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    app: kuberos
+  name: kuberos
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: kuberos
+    spec:
+      # hostAliases are optional, to help route traffic to Dex / OIDC
+      hostAliases:
+      - ip: "192.168.1.1"
+        hostnames:
+        - "dex.oidc.example.com"
+      containers:
+      - image: negz/kuberos:latest
+        name: kuberos
+        command: ["/kuberos", "https://dex.oidc.example.com", "example-app", "/cfg/secret", "/cfg/template"]
+        ports:
+        - name: http
+          containerPort: 10003
+        volumeMounts:
+        - name: config
+          mountPath: /cfg
+      volumes:
+      - name: config
+        configMap:
+          name: kuberos
+          items:
+          - key: template
+            path: template
+          - key: secret
+            path: secret
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: kuberos
+data:
+  template: |
+    apiVersion: v1
+    kind: Config
+    current-context: staging
+    clusters:
+    - name: production
+      cluster:
+        certificate-authority-data: REDACTED
+        server: https://prod.example.org
+    - name: staging
+      cluster:
+        certificate-authority-data: REDACTED
+        server: https://staging.example.org
+  secret: REDACTED
+```
+
 ## Alternatives
 OIDC helpers that run locally to setup `kubectl`:
 * https://github.com/micahhausler/k8s-oidc-helper
