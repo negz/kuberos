@@ -3,6 +3,7 @@ package extractor
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	"go.uber.org/zap"
 	"golang.org/x/oauth2"
@@ -34,9 +35,10 @@ type OIDC interface {
 }
 
 type oidcExtractor struct {
-	log *zap.Logger
-	v   *oidc.IDTokenVerifier
-	h   *http.Client
+	log         *zap.Logger
+	v           *oidc.IDTokenVerifier
+	h           *http.Client
+	emailDomain string
 }
 
 // An Option represents a OIDC extractor option.
@@ -54,6 +56,14 @@ func HTTPClient(h *http.Client) Option {
 func Logger(l *zap.Logger) Option {
 	return func(o *oidcExtractor) error {
 		o.log = l
+		return nil
+	}
+}
+
+// EmailDomain adds the given email domain to an OIDC extractor
+func EmailDomain(domain string) Option {
+	return func(o *oidcExtractor) error {
+		o.emailDomain = domain
 		return nil
 	}
 }
@@ -104,5 +114,10 @@ func (o *oidcExtractor) Process(ctx context.Context, cfg *oauth2.Config, code st
 	if err := idt.Claims(params); err != nil {
 		return nil, errors.Wrap(err, "cannot extract claims from ID token")
 	}
+
+	if o.emailDomain != "" && !strings.HasSuffix(params.Username, "@"+o.emailDomain) {
+		return nil, errors.New("Invalid email domain, expecting " + o.emailDomain)
+	}
+
 	return params, nil
 }

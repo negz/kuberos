@@ -65,20 +65,21 @@ usage: kuberos [<flags>] [<oidc-issuer-url>] [<client-id>] [<client-secret-file>
 Provides OIDC authentication configuration for kubectl.
 
 Flags:
-      --help             Show context-sensitive help (also try --help-long and
-                         --help-man).
+      --help             Show context-sensitive help (also try --help-long and --help-man).
       --listen=":10003"  Address at which to expose HTTP webhook.
   -d, --debug            Run with debug logging.
+      --extra-scopes=EXTRA-SCOPES ...
+                         List of additional scopes to provide in token.
       --shutdown-grace-period=1m
-                         Wait this long for sessions to end before shutting
-                         down.
+                         Wait this long for sessions to end before shutting down.
+      --email-domain=EMAIL-DOMAIN
+                         The email domain to restrict access to.
 
 Args:
   [<oidc-issuer-url>]     OpenID Connect issuer URL.
   [<client-id>]           OAuth2 client ID.
   [<client-secret-file>]  File containing OAuth2 client secret.
-  [<kubecfg-template>]    A kubecfg file containing clusters to populate with a
-                          user and contexts.
+  [<kubecfg-template>]    A kubecfg file containing clusters to populate with a user and contexts.
 ```
 
 The partial `kubeconfig` template should contain only cluster entries and
