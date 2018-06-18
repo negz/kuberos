@@ -65,15 +65,19 @@ usage: kuberos [<flags>] [<oidc-issuer-url>] [<client-id>] [<client-secret-file>
 Provides OIDC authentication configuration for kubectl.
 
 Flags:
-      --help             Show context-sensitive help (also try --help-long and --help-man).
-      --listen=":10003"  Address at which to expose HTTP webhook.
-  -d, --debug            Run with debug logging.
-      --extra-scopes=EXTRA-SCOPES ...
-                         List of additional scopes to provide in token.
-      --shutdown-grace-period=1m
-                         Wait this long for sessions to end before shutting down.
+      --help                   Show context-sensitive help (also try --help-long
+                               and --help-man).
+      --listen=":10003"        Address at which to expose HTTP webhook.
+  -d, --debug                  Run with debug logging.
+      --scopes=profile... ...  List of additional scopes to provide in token.
       --email-domain=EMAIL-DOMAIN
-                         The email domain to restrict access to.
+                               The eamil domain to restrict access to.
+      --shutdown-grace-period=1m
+                               Wait this long for sessions to end before
+                               shutting down.
+      --shutdown-endpoint=SHUTDOWN-ENDPOINT
+                               Insecure HTTP endpoint path (e.g., /quitquitquit)
+                               that responds to a GET to shut down kuberos.
 
 Args:
   [<oidc-issuer-url>]     OpenID Connect issuer URL.
