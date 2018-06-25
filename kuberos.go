@@ -87,21 +87,9 @@ func defaultStateFn(secret []byte) StateFn {
 	// Writing to a hash never returns an error.
 	// nolint: errcheck, gas
 	return func(r *http.Request) string {
-		remote := r.RemoteAddr
-		// Use the forwarded for header instead of the remote address if it is
-		// supplied.
-		for h, v := range r.Header {
-			if h == headerForwardedFor {
-				for _, host := range v {
-					remote = host
-				}
-			}
-		}
-
 		h := sha256.New()
 		h.Write(secret)
 		h.Write([]byte(r.Host))
-		h.Write([]byte(remote))
 		h.Write([]byte(r.UserAgent()))
 		return fmt.Sprintf("%x", h.Sum(nil))
 	}
