@@ -18,7 +18,7 @@ jobs:
         - gometalinter --install
       script:
         - ./scripts/test.sh
-        - gometalinter --fast --vendor --deadline 5m --disable gotype --disable gas --exclude "\.pb.*\.go" --exclude "_strings\.go" --exclude "_test\.go" --exclude "not checked.+Close" ./...
+        - gometalinter --fast --vendor --deadline 5m --disable gotype --disable gas --disable gosec --exclude "\.pb.*\.go" --exclude "_strings\.go" --exclude "_test\.go" --exclude "not checked.+Close" ./...
       after_success:
         - bash <(curl -s https://codecov.io/bash)
     - stage: push
