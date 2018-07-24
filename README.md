@@ -187,6 +187,9 @@ data:
 ```
 
 ## Alternatives
+OIDC/LDAP/static helper specifically for `dex` (Helm charts for dex+helper included)
+* https://github.com/mintel/dex-k8s-authenticator
+
 OIDC helpers that run locally to setup `kubectl`:
 * https://github.com/micahhausler/k8s-oidc-helper
 * https://github.com/coreos/dex/tree/master/cmd/example-app
