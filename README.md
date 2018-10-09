@@ -3,6 +3,13 @@ An OIDC authentication helper for Kubernetes' `kubectl`.
 
 ![The kuberos UI](frontend/kuberos.png)
 
+## Status
+This project is effectively unmaintained. I have not used OIDC authentication for some
+time, instead having switched to using [Kubehook](https://github.com/negz/kubehook).
+I will do my best to shepherd pull requests, but cannot guarantee a prompt response
+and do not have bandwidth to address issues or add new features. Please let me know
+via an issue if you'd be interested in taking ownership of Kuberos.
+
 ## Purpose
 Kubernetes supports several authentication methods, a popular one of which is OIDC.
 The `kubectl` commandline tool can be configured to use OIDC authentication, including
