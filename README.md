@@ -4,7 +4,7 @@ An OIDC authentication helper for Kubernetes' `kubectl`.
 ![The kuberos UI](frontend/kuberos.png)
 
 ## Status
-This project is effectively unmaintained. I have not used OIDC authentication for some
+This project is **effectively unmaintained**. I have not used OIDC authentication for some
 time, instead having switched to using [Kubehook](https://github.com/negz/kubehook).
 I will do my best to shepherd pull requests, but cannot guarantee a prompt response
 and do not have bandwidth to address issues or add new features. Please let me know
@@ -203,3 +203,22 @@ OIDC helpers that run locally to setup `kubectl`:
 
 A Kubernetes JWT webhook helper with a similar UX to Kuberos
 * https://github.com/negz/kubehook
+
+## Contributors
+[Nic Cope](https://github.com/negz) - Creator
+
+[Rajat Sharma](https://github.com/Sharma-Rajat) - Frontend
+
+[Maxime Guyot](https://github.com/Miouge1)
+
+[Ripta Pasay](https://github.com/ripta)
+
+[John Delivuk](https://github.com/john-delivuk)
+
+[Aaron Roydhouse](https://github.com/whereisaaron)
+
+[keattang](https://github.com/keattang)
+
+[jimangel](https://github.com/jimangel)
+
+[arnoldbechtoldt](https://github.com/arnoldbechtoldt)
